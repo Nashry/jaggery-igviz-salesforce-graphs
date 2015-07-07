@@ -1,0 +1,13 @@
+CREATE TABLE `OpportunityTrend` (
+  `Id` varchar(300) NOT NULL,
+  `Amount_Converted__c` decimal(15,2) DEFAULT NULL,
+  `Close_Date__c` date DEFAULT NULL,
+  `Snapshot_Date__c` date DEFAULT NULL,
+  `Opportunity_Status__c` varchar(45) DEFAULT NULL,
+  `Best_Case__c` decimal(15,2) DEFAULT NULL,
+  `Expected_Case__c` decimal(15,2) DEFAULT NULL,
+  `Worst_Case__c` decimal(15,2) DEFAULT NULL,
+  `Close_Confidence__c` varchar(45) DEFAULT NULL,
+  `RecordDate` date NOT NULL,
+  PRIMARY KEY (`Id`,`RecordDate`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
