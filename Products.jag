@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+ 	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/igviz.css"> 
+    <link rel="stylesheet" href="css/charts.css">
+	<link href="http://getbootstrap.com/examples/starter-template/starter-template.css" rel="stylesheet">
+	<script src="js/jquery.min.js"></script>
+  	<script src="js/bootstrap.min.js"></script>
+	<script src="js/date.js"></script>
+    <script src="js/d3.min.js"> </script>
+	<script src="js/vega.js"> </script>
+    <script src="js/igviz.js"> </script>
+    <script src="vega.js"> </script>
+</head>
+
+<div class="row">
+    <div id="ProductLost2015" class="col-lg-6" align="center">Projects lost in 2015
+        <br>
+        <br>
+    </div>
+    <div id="ProductLeadSource" class="col-lg-6" align="center">Lead Source with Amount in 2015
+        <br>
+        <br>
+    </div>
+</div>
+<div class="row">
+
+    <div id="ProductSupport" class="col-lg-6" align="center">Products with support in 2015
+        <br>
+        <br>
+    </div>
+    <div>
+    <a href="http://10.100.4.35:9763/ProductJaggery/PipelineGraph.jag">Click for PipelineGraph</a>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+<%
+
+var queryProductLost2015 =  "SELECT count(Project__c) as 'NoofProjects', Reason_Lost__c FROM products WHERE IsWon='false' AND IsClosed='true' AND FiscalYear='2015' AND Reason_Lost__c!='null' GROUP BY Reason_Lost__c";
+//Project and products used with reason for failure that are closed and not won
+
+var queryProductLeadSource ="SELECT DISTINCT LeadSource, Sum(Amount) as 'Total' FROM products WHERE FiscalYear='2015' GROUP BY LeadSource";
+//The lead source and the amount gained by them
+
+var queryProductByAmount ="SELECT DISTINCT Name,Products_in_use__c, Sum(Amount) as 'Amount', Opportunity_Term__c FROM products WHERE Products_in_use__c!='null' AND Name!='null' AND Opportunity_Term__c!='null' AND FiscalYear='2015' GROUP BY Products_in_use__c";
+//the amount gained by each product
+
+var queryProductSupport ="SELECT DISTINCT Products_in_use__c, count(Includes_Production_Support__c) as 'Count' FROM products WHERE FiscalYear='2015' AND Includes_Production_Support__c='true' AND Products_in_use__c!='null' GROUP BY Products_in_use__c";
+//Project, products used and the year that were won
+//, Includes_QuickStart__c,Includes_Consulting__c,Includes_Dev_Support__c,Includes_Production_Support__c 
+
+var DataProductLost2015=[];
+var DataProductLeadSource=[];
+var DataProductByAmount=[];
+var DataProductSupport=[];
+
+
+var db = new Database("jdbc:mysql://localhost:3306/salesforce", "root", "root");
+try{
+
+//Products lost with reasons
+var resultProductLost2015 = db.query(queryProductLost2015);
+                for (var i = 0; i < resultProductLost2015.length; i++) {
+                    DataProductLost2015[i] = [resultProductLost2015[i].NoofProjects,resultProductLost2015[i].Reason_Lost__c];
+                }
+
+//Lead source with amounts                
+var resultProductLeadSource = db.query(queryProductLeadSource);
+                for (var i = 0; i < resultProductLeadSource.length; i++) {
+                    DataProductLeadSource[i] = [resultProductLeadSource[i].LeadSource,resultProductLeadSource[i].Total];
+                }
+
+//Products  in use with count               
+var resultProductSupport = db.query(queryProductSupport);
+                for (var i = 0; i < resultProductSupport.length; i++) {
+                    DataProductSupport[i] = [resultProductSupport[i].Products_in_use__c,resultProductSupport[i].Count];
+                }                        
+}
+catch(e){
+    
+}
+
+%>
+
+    var width=500;
+    var height = 500;  
+
+//Products lost with reasons
+    console.log('starting the script');
+    var dataTableProductLost2015= {
+                            "metadata":{
+                                "names":["NoOfProjects","Reason for loss"],
+                                "types":['N','C']
+                            },
+                            "data": <%=DataProductLost2015%>
+                    }             
+    var configProductLost2015 = {
+                            "title": "Projects lost in 2015",
+                            "yAxis": 0,
+                            "xAxis": 1,
+                            "width": width,
+                            "height": height,
+                            "textAngle" : "90",
+                            "chartType": "bar"
+                        }
+    console.log('Draw table');
+                    //draw a stacked bar chart on div #bar
+                    chart=igviz.setUp("#ProductLost2015",configProductLost2015,dataTableProductLost2015);
+                    chart.plot(dataTableProductLost2015.data)
+
+                    window.onresize=function(){chart.resize()};
+
+//Lead source with amounts
+    var dataTableProductLeadSource= {
+                            "metadata":{
+                                "names":["LeadSource","Total"],
+                                "types":['C', 'N']
+                            },
+                            "data": <%=DataProductLeadSource%>
+                    }           
+    var configProductLeadSource ={
+                            "title": "LeadSource in 2015",
+                            "yAxis": 1,
+                            "xAxis": 0,
+                            "groupedBy":0,
+                            "width": width,
+                            "height": height,
+                            "textAngle" : "90",
+                            "chartType": "bar"
+                        }
+    console.log('Draw table');
+    //draw a  bar chart on div , on #ProductLeadSource div
+    chart=igviz.setUp("#ProductLeadSource",configProductLeadSource,dataTableProductLeadSource);
+    chart.plot(dataTableProductLeadSource.data)
+
+    window.onresize=function(){chart.resize()};
+
+//Products  in use with count
+    var dataTableProductSupport= {
+                            "metadata":{
+                                "names":["Products_in_use__c","Count"],
+                                "types":['C','N']
+                            },
+                            "data": <%=DataProductSupport%>
+                    }
+    var configProductSupport ={
+                            "title": "ProductBySupport",
+                            "xAxis": 1,
+                            "width": width,
+                            "height": height,
+                            "chartType": "table",
+                            "colorBasedStyle": true
+                        }
+    console.log('Draw table');
+    //draw a bar chart on div #ProductByAmount
+                        igviz.draw("#ProductSupport",configProductSupport,dataTableProductSupport);
+</script>
+</body>
+</html>
