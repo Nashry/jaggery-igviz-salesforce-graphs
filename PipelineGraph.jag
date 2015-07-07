@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+  <meta charset="UTF-8"> 
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+ 	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/igviz.css"> 
+    <link rel="stylesheet" href="css/charts.css">
+	<link href="http://getbootstrap.com/examples/starter-template/starter-template.css" rel="stylesheet">
+	<script src="js/jquery.min.js"></script>
+  	<script src="js/bootstrap.min.js"></script>
+	<script src="js/date.js"></script>
+    <script src="js/d3.min.js"> </script>
+	<script src="js/vega.js"> </script>
+    <script src="js/igviz.js"> </script>
+    <script src="vega.js"> </script>
+</head>
+
+
+<div class="row">
+    <div id="Pipeline" align="center"><p style="color:green;font-size:20px">Opportunity Pipeline
+        <br>
+        <br>
+    </div>
+</div>
+
+<script type="text/javascript">
+<%
+
+//Projects with CloseDate in current year which are open
+var queryProductPipeline =  "select sum(Best_Case__c) as 'Best',sum(Expected_Case__c) as 'Expected',sum(Worst_Case__c) as 'Worst',WEEKOFYEAR(Snapshot_Date__c) as 'weekNo' FROM OpportunityTrend WHERE YEAR(Close_Date__c)=YEAR(CURRENT_DATE) AND QUARTER(Close_Date__c)=QUARTER(CURRENT_DATE) AND Opportunity_Status__c='Open' group by weekNo";
+
+
+
+//Projects with CloseDate in current year which are closed won
+var queryProductPipeline2 =  "select Opportunity_Status__c,WEEKOFYEAR(Snapshot_Date__c) as 'weekNo', sum(Amount_Converted__c) as 'Amount' FROM OpportunityTrend WHERE YEAR(Close_Date__c)=YEAR(CURRENT_DATE) AND QUARTER(Close_Date__c)=QUARTER(CURRENT_DATE) AND Opportunity_Status__c='Closed Won' group by weekNo";
+
+var DataProductPipeline=[];
+
+var db = new Database("jdbc:mysql://localhost:3306/sf", "root", "root");
+try{
+
+//Projects with CloseDate in current year which are closed won
+        var resultProductPipeline2 = db.query(queryProductPipeline2);
+                for (var j = 0; j < resultProductPipeline2.length; j++) {
+                    DataProductPipeline[j] = [resultProductPipeline2[j].Opportunity_Status__c,resultProductPipeline2[j].weekNo.toString(),resultProductPipeline2[j].Amount];
+                }
+var bestRes;
+var expectedRes;
+var WorstCase;
+
+//Projects with CloseDate in current year which are open
+var resultProductPipeline = db.query(queryProductPipeline);
+    for (var z=0 ; z < resultProductPipeline.length; z++) {
+        var BestCase=0;
+        var ExpectedCase=0;
+        WorstCase=0;
+        bestRes=resultProductPipeline[z].Best;
+        expectedRes=resultProductPipeline[z].Expected;
+        WorstCase= resultProductPipeline[z].Worst;
+
+       if((bestRes>expectedRes) && (bestRes!=null)){
+            BestCase= bestRes - expectedRes;
+        }
+        if((expectedRes>WorstCase) && (expectedRes!=null)){
+            ExpectedCase= expectedRes - WorstCase;
+        }
+/*        if(BestCase==expectedRes && expectedRes==WorstCase && WorstCase==0){
+            resultProductPipeline[z].weekNo=resultProductPipeline[z-1].weekNo +1;
+        }
+           */ 
+        var f=3*z+j;
+            DataProductPipeline[f] = ["Open Worst Case",resultProductPipeline[z].weekNo.toString(),WorstCase];
+            DataProductPipeline[f+1] = ["Open Expected Case",resultProductPipeline[z].weekNo.toString(),ExpectedCase];
+            DataProductPipeline[f+2] = ["Open Best Case",resultProductPipeline[z].weekNo.toString(),BestCase];
+        }
+                             
+}
+catch(e){
+    
+}
+
+%>
+    console.log('starting the script');
+
+
+//Pipeline graph
+    var dataTableProductPipeline= {
+                            "metadata":{
+                                "names":["Opportunity Status","Week No","Amount"],
+                                "types":['C','C','N']
+                            },
+                            "data": <%=DataProductPipeline%>
+                    }
+                    console.log("the data is "+dataTableProductPipeline);
+
+    var width= 500;
+    var height = 400;     
+
+    console.log("this is the dataTableProductPipeline"+<%=DataProductPipeline%>);
+
+    var configProductPipeline ={
+                            "title": "Projects by Opportunity_Status__c,weekNo,Amount",
+                            "yAxis": 2,
+                            "xAxis": 1,
+                            "groupedBy":0,
+                            "width": width,
+                            "height": height,
+                            "chartType": "bar",
+                            "format":"stacked",
+                            "padding" : "15px",
+                            "margin-left" : "20px"
+
+                        }          
+/*    console.log(dataTableProductPipeline.data);*/
+
+                    //draw a stacked bar chart on div #bar
+                    chart=igviz.setUp("#Pipeline",configProductPipeline,dataTableProductPipeline);
+                    chart.plot(dataTableProductPipeline.data)
+
+                    window.onresize=function(){chart.resize()};
+    console.log("later i am here");
+
+</script>
+</body>
+</html>
